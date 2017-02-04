@@ -9,11 +9,12 @@
 
 #define BUF_LEN 1024
 
+// TODO: Handle adding trailing directory slash if not present
 
 /**
  * Handle file saved
  */
-void handleFile(char *dir, char *fileName, char *script){
+void handleFile(char *dir, char *fileName, char *script, char *argv[]){
   int pathLen, dirLen;
   char *path;
 
@@ -29,10 +30,20 @@ void handleFile(char *dir, char *fileName, char *script){
 
     // Concatenate dir with filename
     dirLen = strlen(dir);
-    pathLen = dirLen + strlen(fileName);
-    path = malloc(pathLen + 1);
-    strcpy(path, dir);
-    strcpy(path+dirLen, fileName);
+    if (dir[dirLen-2] != '/'){
+      // Add trailing slash
+      pathLen = dirLen + strlen(fileName) + 1;
+      path = malloc(pathLen + 1);
+      strcpy(path, dir);
+      path[dirLen] = '/';
+      strcpy(path+dirLen+1, fileName);
+    } else {
+      // No need for slash
+      pathLen = dirLen + strlen(fileName);
+      path = malloc(pathLen + 1);
+      strcpy(path, dir);
+      strcpy(path+dirLen, fileName);
+    }
 
     printf("Child handling file '%s'\n", path);
 
@@ -49,7 +60,8 @@ void handleFile(char *dir, char *fileName, char *script){
     close(fd);
 
     // Pass off to script
-    execl(script, script, NULL);
+    //execl(script, script, NULL);
+    execv(script, argv);
     perror("child-execl");
     
     exit(EXIT_FAILURE);
@@ -61,7 +73,7 @@ void handleFile(char *dir, char *fileName, char *script){
  * Main body loop
  * @param fd inotify watch descriptor
  */
-int mainLoop(int fd, char *dir, char *script){
+int mainLoop(int fd, char *dir, char *script, char *argv[]){
   char buf[BUF_LEN] __attribute__ ((aligned(8)));
   struct inotify_event *eInote;
 
@@ -82,7 +94,7 @@ int mainLoop(int fd, char *dir, char *script){
 
     // Cast to event struct
     eInote = (struct inotify_event *) buf;
-    handleFile(dir, eInote->name, script);
+    handleFile(dir, eInote->name, script, argv);
   }
   return EXIT_SUCCESS;
 }
@@ -96,7 +108,7 @@ int main(int argc, char *argv[]){
   int fdWatch, fdInote;
 
   // Check args
-  if (argc != 3){
+  if (argc < 3){
     fprintf(stderr, "Usage: %s [path to watch] [script]\n", argv[0]);
     return EXIT_FAILURE;
   }
@@ -116,7 +128,7 @@ int main(int argc, char *argv[]){
   }
 
   // Watch loop
-  int ret = mainLoop(fdInote, watchPath, script);
+  int ret = mainLoop(fdInote, watchPath, script, argv + 2);
 
   // Shutdown
   if (inotify_rm_watch(fdInote, fdWatch)){
