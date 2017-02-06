@@ -1,8 +1,11 @@
+#!/usr/bin/python
+''' Prints command line arguments and striped input '''
 import sys
-print "Hello World"
 
 for i, arg in enumerate(sys.argv):
     print str(i) + ": "+ arg
 
 for line in sys.stdin:
-    print line
+    sline = line.strip()
+    if len(sline) > 0:
+        print sline

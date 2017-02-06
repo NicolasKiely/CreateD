@@ -9,7 +9,6 @@
 
 #define BUF_LEN 1024
 
-// TODO: Handle adding trailing directory slash if not present
 
 /**
  * Handle file saved
@@ -37,6 +36,7 @@ void handleFile(char *dir, char *fileName, char *script, char *argv[]){
       strcpy(path, dir);
       path[dirLen] = '/';
       strcpy(path+dirLen+1, fileName);
+
     } else {
       // No need for slash
       pathLen = dirLen + strlen(fileName);
@@ -60,9 +60,8 @@ void handleFile(char *dir, char *fileName, char *script, char *argv[]){
     close(fd);
 
     // Pass off to script
-    //execl(script, script, NULL);
     execv(script, argv);
-    perror("child-execl");
+    perror("child-execv");
     
     exit(EXIT_FAILURE);
   }
